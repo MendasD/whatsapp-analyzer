@@ -5,8 +5,11 @@ description = "WhatsApp package to analyse discussions from a WhatsApp group"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "emoji>=2.15.0",
     "langdetect>=1.0.9",
+    "nltk>=3.9.4",
     "pandas>=3.0.1",
     "pytest>=9.0.2",
     "rich>=14.3.3",
+    "spacy>=3.8.13",
 ]
