@@ -1,9 +1,9 @@
 """
 Topic classification for WhatsApp conversation analysis.
 
-Assigns a topic to each message using Latent Dirichlet Allocation (LDA)
-from scikit-learn. BERTopic support is provided by a separate extension
-(issue #09).
+Supports two backends selected via the `method` parameter:
+  - 'lda'      — Latent Dirichlet Allocation (scikit-learn, always available).
+  - 'bertopic' — BERTopic (optional; install with pip install whatsapp-analyser[bertopic]).
 
 Input:  DataFrame produced by Cleaner  (columns include: cleaned_message)
 Output: dict with keys 'df' (enriched DataFrame) and 'group_topics' (summary)
@@ -94,16 +94,83 @@ class TopicClassifier:
         return {"df": result_df, "group_topics": group_topics}
 
     def _fit_bertopic(self, df: pd.DataFrame, texts: list[str]) -> dict:
-        """Route to BERTopic when the optional dependency is available."""
+        """Fit a BERTopic model and annotate the DataFrame."""
         try:
-            from bertopic import BERTopic  # noqa: F401
+            from bertopic import BERTopic
         except ImportError:
             raise RuntimeError(
                 "BERTopic is not installed. "
                 "Run: pip install 'whatsapp-analyser[bertopic]'"
             )
-        # Full implementation added in issue #09.
-        raise NotImplementedError("BERTopic support is implemented in issue #09.")
+
+        logger.info(
+            "Fitting BERTopic with ~%d topics on %d messages.", self.n_topics, len(texts)
+        )
+
+        topic_model = BERTopic(nr_topics=self.n_topics, calculate_probabilities=True)
+        raw_topics, probs = topic_model.fit_transform(texts)
+
+        # BERTopic assigns -1 to outliers; remap to 0 to keep topic_id non-negative
+        topic_ids = [max(0, int(t)) for t in raw_topics]
+
+        result_df = df.copy()
+        result_df["topic_id"] = topic_ids
+        result_df["topic_score"] = self._bertopic_scores(probs, topic_ids)
+
+        group_topics = self._build_bertopic_group_topics(topic_model, topic_ids)
+
+        logger.info("BERTopic fitting complete.")
+        return {"df": result_df, "group_topics": group_topics}
+
+    @staticmethod
+    def _bertopic_scores(probs, topic_ids: list[int]) -> list[float]:
+        """
+        Extract per-document confidence scores from BERTopic probability output.
+
+        Args:
+            probs:     Probability array returned by BERTopic.fit_transform().
+                       Can be 1-D (raw HDBSCAN confidences) or 2-D (n_docs × n_topics).
+            topic_ids: Normalised topic assignment per document.
+
+        Returns:
+            List of floats, one score per document.
+        """
+        if probs is None:
+            return [1.0] * len(topic_ids)
+        probs_arr = np.asarray(probs)
+        if probs_arr.ndim == 1:
+            return [float(p) for p in probs_arr]
+        # 2-D: columns correspond to topics in order; use the assigned topic's column
+        scores = []
+        for i, tid in enumerate(topic_ids):
+            col = min(tid, probs_arr.shape[1] - 1)
+            scores.append(float(probs_arr[i, col]))
+        return scores
+
+    @staticmethod
+    def _build_bertopic_group_topics(topic_model, topic_ids: list[int]) -> pd.DataFrame:
+        """
+        Build a group_topics summary DataFrame from a fitted BERTopic model.
+
+        Args:
+            topic_model: Fitted BERTopic instance.
+            topic_ids:   Normalised topic assignment per document.
+
+        Returns:
+            DataFrame with columns: topic_id, topic_label, weight.
+        """
+        unique_topics = sorted(set(topic_ids))
+        total = len(topic_ids)
+        rows = []
+        for topic_id in unique_topics:
+            words_scores = topic_model.get_topic(topic_id) or []
+            top_words = [w for w, _ in words_scores[:5]]
+            # Pad with placeholders when the model returns fewer than 5 words
+            top_words += [f"word{i}" for i in range(5 - len(top_words))]
+            label = " / ".join(top_words)
+            weight = float(sum(1 for t in topic_ids if t == topic_id) / total)
+            rows.append({"topic_id": topic_id, "topic_label": label, "weight": weight})
+        return pd.DataFrame(rows)
 
     @staticmethod
     def _build_group_topics(
