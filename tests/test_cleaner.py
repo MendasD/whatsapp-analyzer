@@ -208,7 +208,7 @@ def test_lemmatisation_disabled_does_not_call_spacy(sample_df):
 def test_emoji_removed_when_flag_set():
     df = _make_df(["Bonjour tout le monde 😀🎉 super"])
     with patch(_LOAD_STOPWORDS, return_value=set()), \
-         patch("whatsapp_classifier.cleaner.Cleaner._strip_emoji", return_value="Bonjour tout le monde  super"):
+         patch("whatsapp_analyzer.cleaner.Cleaner._strip_emoji", return_value="Bonjour tout le monde  super"):
         result = Cleaner(lang="fr", use_lemma=False, remove_emoji=True).clean(df)
     assert len(result) > 0
 
