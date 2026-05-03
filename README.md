@@ -32,6 +32,13 @@ A local-only Python pipeline for analysing WhatsApp group chat exports. Parse, c
 
 ## Installation
 
+### Using pip on your terminal
+
+```bash
+pip install wachat-analyzer
+```
+### Using source code
+
 ```bash
 git clone https://github.com/MendasD/whatsapp-analyzer.git
 cd whatsapp-analyzer
