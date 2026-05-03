@@ -283,12 +283,54 @@ def test_generate_report_creates_output_dir_if_missing(tmp_path):
 
 # --- generate_comparison_report ---
 
+def _make_comparison_data(analyzers: list) -> dict:
+    """Build a minimal comparison_data dict matching GroupComparator.report() output."""
+    activity = pd.DataFrame(
+        {
+            "nb_messages":     [10, 20],
+            "nb_participants": [3, 5],
+            "msgs_per_day":    [1.5, 3.0],
+            "period_start":    pd.to_datetime(["2024-01-01", "2024-02-01"]),
+            "period_end":      pd.to_datetime(["2024-06-01", "2024-06-15"]),
+        },
+        index=["GroupA", "GroupB"],
+    )
+    topics = pd.DataFrame(
+        {"topic_a / b / c": [0.6, 0.4], "topic_d / e / f": [0.4, 0.6]},
+        index=["GroupA", "GroupB"],
+    )
+    sentiment = pd.DataFrame(
+        {"sentiment_mean": [0.2, -0.1], "pos_pct": [0.6, 0.3], "neg_pct": [0.1, 0.4]},
+        index=["GroupA", "GroupB"],
+    )
+    common_users = pd.DataFrame(columns=["author", "groups"])
+    return {
+        "analyzers":    analyzers,
+        "activity":     activity,
+        "topics":       topics,
+        "sentiment":    sentiment,
+        "common_users": common_users,
+    }
+
+
+def _cmp_patches():
+    """Context managers needed for all comparison-report tests."""
+    return (
+        patch(_SUBPLOTS,     return_value=_mock_subplots()),
+        patch(_SNS_HEATMAP),
+        patch(_FIG_TO_BASE64, return_value="testbase64"),
+    )
+
+
 def test_generate_comparison_report_returns_path(tmp_path):
     mock_az = MagicMock()
     mock_az._results = _make_results()
     with patch(_SUBPLOTS, return_value=_mock_subplots()), \
+         patch(_SNS_HEATMAP), \
          patch(_FIG_TO_BASE64, return_value="testbase64"):
-        result = Visualizer().generate_comparison_report([mock_az], tmp_path)
+        result = Visualizer().generate_comparison_report(
+            _make_comparison_data([mock_az]), tmp_path
+        )
     assert isinstance(result, Path)
 
 
@@ -296,13 +338,19 @@ def test_generate_comparison_report_filename(tmp_path):
     mock_az = MagicMock()
     mock_az._results = _make_results()
     with patch(_SUBPLOTS, return_value=_mock_subplots()), \
+         patch(_SNS_HEATMAP), \
          patch(_FIG_TO_BASE64, return_value="testbase64"):
-        path = Visualizer().generate_comparison_report([mock_az], tmp_path)
+        path = Visualizer().generate_comparison_report(
+            _make_comparison_data([mock_az]), tmp_path
+        )
     assert path.name == "comparison_report.html"
 
 
 def test_generate_comparison_report_handles_empty_analyzer_list(tmp_path):
     with patch(_SUBPLOTS, return_value=_mock_subplots()), \
+         patch(_SNS_HEATMAP), \
          patch(_FIG_TO_BASE64, return_value="testbase64"):
-        path = Visualizer().generate_comparison_report([], tmp_path)
+        path = Visualizer().generate_comparison_report(
+            _make_comparison_data([]), tmp_path
+        )
     assert path.exists()

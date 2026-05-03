@@ -7,8 +7,15 @@ then displays results in themed tabs. Works without the [media] extra.
 
 from __future__ import annotations
 
+import sys
 import tempfile
 from pathlib import Path
+
+# Make the package importable when Streamlit runs this file directly
+# (i.e. without `pip install -e .` being active in the current env).
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
 import streamlit as st
 
@@ -263,22 +270,23 @@ def _run_pipeline(uploaded_file, config: dict) -> dict:
         loaded = Loader().load(tmp_path)
 
         _step(25, "📝 Parsing messages…")
-        df = Parser().parse(loaded.chat_path)
+        df_raw = Parser().parse(loaded.chat_path)
 
         if config["anonymise"]:
-            try:
-                from whatsapp_analyzer.utils import anonymize_authors
-                df = anonymize_authors(df)
-            except Exception:
-                pass
+            from whatsapp_analyzer.parser import Parser as _P
+            from whatsapp_analyzer.utils import anonymize_author
+            df_raw["author"] = df_raw["author"].apply(anonymize_author)
 
         _step(40, "🧹 Cleaning & preprocessing…")
-        df = Cleaner().clean(df, min_tokens=config["min_words"],
-                             forced_lang=forced_lang)
+        df_clean = Cleaner(
+            lang=forced_lang,
+            min_words=config["min_words"],
+        ).clean(df_raw)
 
         results: dict = {
             "group_name": loaded.group_name,
-            "df_clean": df,
+            "df_raw":   df_raw,
+            "df_clean": df_clean,
             "topics": None,
             "sentiment": None,
             "temporal": None,
@@ -290,19 +298,19 @@ def _run_pipeline(uploaded_file, config: dict) -> dict:
         try:
             results["topics"] = TopicClassifier(
                 n_topics=config["n_topics"]
-            ).fit_transform(df)
+            ).fit_transform(df_clean)
         except Exception as exc:
             st.warning(f"Topic modelling skipped: {exc}")
 
         _step(65, "😊 Analysing sentiment…")
         try:
-            results["sentiment"] = SentimentAnalyzer().analyze(df)
+            results["sentiment"] = SentimentAnalyzer().analyze(df_clean)
         except Exception as exc:
             st.warning(f"Sentiment analysis skipped: {exc}")
 
         _step(76, "📅 Computing activity patterns…")
         try:
-            results["temporal"] = TemporalAnalyzer().analyze(df)
+            results["temporal"] = TemporalAnalyzer().analyze(df_clean)
         except Exception as exc:
             st.warning(f"Temporal analysis skipped: {exc}")
 
@@ -431,7 +439,7 @@ def _tab_sentiment(results: dict) -> None:
     by_user = sentiment.get("by_user")
     if by_user is not None and not by_user.empty:
         _section("👤", "Sentiment by participant")
-        by_user_s = by_user.set_index("author")["sentiment_score"].sort_values()
+        by_user_s = by_user.set_index("author")["mean_score"].sort_values()
         fig2, ax = plt.subplots(figsize=(10, max(3, len(by_user_s) * 0.45)))
         colors = ["#e74c3c" if v < 0 else "#25d366" for v in by_user_s.values]
         ax.barh(by_user_s.index, by_user_s.values, color=colors, edgecolor="none")

@@ -46,22 +46,73 @@ _IOS_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Lines that are WhatsApp system messages, not user messages
+# Matches the timestamp prefix only — used to detect line boundaries regardless
+# of whether the line has an Author: Message suffix.  A line that starts with a
+# timestamp but does NOT match the full _ANDROID_RE / _IOS_RE is a WhatsApp
+# system notification (e.g. "Alice a ajouté Bob") and must be treated as a new
+# entry, not merged as a continuation of the previous message.
+_TIMESTAMP_PREFIX_RE = re.compile(
+    r"^(?:\d{1,2}/\d{1,2}/\d{2,4}[,\s]|\[\d{1,2}/\d{1,2}/\d{2,4})",
+)
+
+# Message-level patterns that flag a parsed Author:Message line as a system event.
+# Patterns are anchored or use word boundaries to reduce false positives on real
+# user text (e.g. "I left the meeting" would NOT match "\bleft$" alone, but it
+# would match "left" — so we scope each pattern as tightly as possible).
 _SYSTEM_PATTERNS = re.compile(
-    r"(Messages and calls are end-to-end encrypted"
-    r"|<Media omitted>"
-    r"|Média omis"
-    r"|message deleted"
-    r"|Message supprimé"
-    r"|vous avez rejoint"
-    r"|added|removed|left|joined|changed the subject"
-    r"|created group)",
+    r"(?:"
+    # Encryption notices
+    r"messages and calls are end-to-end encrypted"
+    r"|les messages et les appels sont chiffrés de bout en bout"
+    r"|tap to learn more"
+    r"|appuyez pour en savoir plus"
+    # Deleted / missing messages
+    r"|this message was deleted"
+    r"|ce message a été supprimé"
+    r"|message (?:deleted|supprimé)"
+    # Media placeholders
+    r"|<media omitted>"
+    r"|média omis"
+    r"|(?:image|video|audio|sticker|document|gif) omitted"
+    # Group membership events — French
+    r"|\ba ajouté\b"
+    r"|\ba quitté\b"
+    r"|\ba été supprimé[e]?\b"
+    r"|\ba supprimé\b"
+    r"|\ba rejoint\b"
+    r"|\ba créé (?:le )?groupe"
+    r"|\bont été ajouté[e]?s?\b"
+    r"|\bavez (?:été ajouté|rejoint)\b"
+    r"|\ba changé (?:le nom|l'intitulé|l'icône) du groupe"
+    r"|\ba modifié la description du groupe"
+    r"|\ba épinglé un message"
+    r"|\ba rejoint en utilisant le lien"
+    # Group membership events — English
+    r"|\bwas added\b"
+    r"|\bwere added\b"
+    r"|\byou were added\b"
+    r"|\bjoined using (?:this|the) group"
+    r"|\bjoined the group\b"
+    r"|\bcreated (?:the )?group\b"
+    r"|\bchanged the (?:subject|group name|group description|group(?:'s)? icon)\b"
+    r"|\bchanged this group"
+    r"|\bpinned a message\b"
+    r"|\bwas removed from the group\b"
+    r"|\bremoved .{1,50} from the group\b"
+    # Missed calls
+    r"|missed (?:voice|video) call"
+    r"|appel (?:vocal|vidéo) manqué"
+    # Security-code change
+    r"|your security code with .{1,60} changed"
+    r"|votre code de sécurité avec .{1,60} a changé"
+    r")",
     re.IGNORECASE,
 )
 
 # Lines that reference an omitted media attachment
 _MEDIA_PATTERN = re.compile(
-    r"(<Media omitted>|Média omis|image omitted|video omitted|audio omitted)",
+    r"(<Media omitted>|Média omis|image omitted|video omitted|audio omitted"
+    r"|sticker omitted|document omitted|gif omitted)",
     re.IGNORECASE,
 )
 
@@ -140,8 +191,15 @@ class Parser:
         return merged
 
     def _is_message_start(self, line: str) -> bool:
-        """Return True if the line starts with a recognised timestamp pattern."""
-        return bool(_ANDROID_RE.match(line) or _IOS_RE.match(line))
+        """
+        Return True for any line that begins with a WhatsApp timestamp.
+
+        Using only the timestamp prefix (not the full Author: pattern) ensures
+        that system-event lines such as "12/01/2024, 08:15 - Alice a ajouté Bob"
+        are treated as new entries rather than being appended to the previous
+        user message as a continuation.
+        """
+        return bool(_TIMESTAMP_PREFIX_RE.match(line))
 
     def _parse_line(self, line: str) -> Optional[dict]:
         """

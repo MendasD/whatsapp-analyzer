@@ -459,7 +459,7 @@ def test_english_lang_uses_vader_not_camembert():
     assert pipe.call_count == 0
 
 
- """--- VADER path unaffected after CamemBERT addition ---"""
+"""--- VADER path unaffected after CamemBERT addition ---"""
 
 def test_vader_path_unaffected():
     df = _make_df(_TEXTS, _AUTHORS)

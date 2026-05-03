@@ -12,3 +12,6 @@ wheels/
 
 # data
 data/
+
+# Generated reports
+reports/

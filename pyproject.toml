@@ -1,5 +1,5 @@
 [project]
-name = "whatsapp-analyser"
+name = "whatsapp-analyzer"
 version = "0.1.0"
 description = "WhatsApp package to analyse discussions from a WhatsApp group"
 readme = "README.md"
@@ -18,12 +18,11 @@ dependencies = [
     "seaborn>=0.13.0",
     "rich>=14.3.3",
     "spacy>=3.8.13",
-    "vaderSentiment>=3.3.2",
-    "transformers>=4.40.0",
+    "wordcloud>=1.9.0",
 ]
 
 [project.scripts]
-whatsapp-analyser = "whatsapp_analyzer.cli:cli"
+whatsapp-analyzer = "whatsapp_analyzer.cli:cli"
 
 [tool.setuptools.packages.find]
 where = ["."]
