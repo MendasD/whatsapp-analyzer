@@ -18,11 +18,11 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-# Score thresholds for label assignment
+"Score thresholds for label assignment"
 _POSITIVE_THRESHOLD = 0.05
 _NEGATIVE_THRESHOLD = -0.05
 
-# CamemBERT model identifier on the HuggingFace hub
+"CamemBERT model identifier on the HuggingFace hub"
 _CAMEMBERT_MODEL = "tblard/tf-allocine"
 
 
@@ -38,9 +38,9 @@ class SentimentAnalyzer:
 
     def __init__(self, lang: str = "fr") -> None:
         self.lang = lang
-        # Lazily-loaded VADER analyser — initialised on first use
+        "Lazily-loaded VADER analyser — initialised on first use"
         self._vader: Optional[object] = None
-        # Lazily-loaded CamemBERT pipeline — initialised on first use
+        "Lazily-loaded CamemBERT pipeline — initialised on first use"
         self._camembert: Optional[object] = None
 
     def analyze(self, df: pd.DataFrame) -> dict:
@@ -173,7 +173,7 @@ class SentimentAnalyzer:
                 result = self._camembert(text)[0]
                 label: str = result["label"]
                 score: float = float(result["score"])
-                # LABEL_1 = positive, LABEL_0 = negative
+                "LABEL_1 = positive, LABEL_0 = negative"
                 scores.append(score if label == "LABEL_1" else -score)
             except Exception as exc:
                 logger.debug("CamemBERT failed on one message (%s) — using 0.0.", exc)
@@ -185,7 +185,7 @@ class SentimentAnalyzer:
     def _camembert_available() -> bool:
         """Return True when the transformers package can be imported."""
         try:
-            import transformers  # noqa: F401
+            import transformers
             return True
         except ImportError:
             return False
