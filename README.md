@@ -6,6 +6,8 @@
 
 A local-only Python pipeline for analysing WhatsApp group chat exports. Parse, clean, classify topics, score sentiment, profile users, and generate self-contained HTML reports — entirely on your device. No message content ever leaves your machine.
 
+> 📖 **Full documentation** — [English](docs/documentation_en.md) · [Français](docs/documentation_fr.md)
+
 ## Table of contents
 
 - [About](#about)
@@ -128,10 +130,12 @@ The Streamlit interface lets you upload a `.zip` or `.txt` export, configure ana
 
 ## Documentation
 
-Full documentation is available in two languages:
+Full documentation is available in two languages and covers installation, all CLI options, the complete Python API, module-by-module reference, output schemas, optional extras, and troubleshooting:
 
-- [English documentation](docs/documentation_en.md)
-- [Documentation en français](docs/documentation_fr.md)
+| Language | Link |
+|----------|------|
+| 🇬🇧 English | [docs/documentation_en.md](docs/documentation_en.md) |
+| 🇫🇷 Français | [docs/documentation_fr.md](docs/documentation_fr.md) |
 
 ## Module overview
 
