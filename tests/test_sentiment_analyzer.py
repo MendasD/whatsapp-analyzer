@@ -13,10 +13,6 @@ import pytest
 from whatsapp_analyzer.sentiment_analyzer import SentimentAnalyzer
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 def _make_df(messages: list[str], authors: list[str] | None = None) -> pd.DataFrame:
     """Return a minimal cleaned DataFrame that mimics Cleaner output."""
     n = len(messages)
@@ -37,17 +33,17 @@ def _make_df(messages: list[str], authors: list[str] | None = None) -> pd.DataFr
 
 
 _TEXTS = [
-    "super excellent fantastique",   # strongly positive
-    "terrible horrible mauvais",     # strongly negative
-    "bonjour au revoir",             # neutral
-    "génial bravo merveilleux",      # positive
-    "nul catastrophe désastre",      # negative
-    "cours demain annulé",           # neutral-ish
+    "super excellent fantastique",   
+    "terrible horrible mauvais",     
+    "bonjour au revoir",            
+    "génial bravo merveilleux",      
+    "nul catastrophe désastre",      
+    "cours demain annulé",          
 ]
 _AUTHORS = ["Aminata", "Moussa", "Aminata", "Moussa", "Aminata", "Moussa"]
 
 
-# Patch target for VADER inside the module
+"Patch target for VADER inside the module"
 _VADER_CLS = "vaderSentiment.vaderSentiment.SentimentIntensityAnalyzer"
 
 
@@ -62,9 +58,6 @@ def _make_vader_mock(scores: list[float] | None = None):
     return mock_vader
 
 
-# ---------------------------------------------------------------------------
-# Return type and structure
-# ---------------------------------------------------------------------------
 
 def test_analyze_returns_dict():
     df = _make_df(_TEXTS, _AUTHORS)
@@ -94,9 +87,6 @@ def test_analyze_has_global_key():
     assert "global" in result
 
 
-# ---------------------------------------------------------------------------
-# Output DataFrame columns and types
-# ---------------------------------------------------------------------------
 
 def test_output_df_has_sentiment_score_column():
     df = _make_df(_TEXTS, _AUTHORS)
@@ -152,9 +142,6 @@ def test_input_dataframe_not_mutated():
     assert set(df.columns) == original_cols
 
 
-# ---------------------------------------------------------------------------
-# Label thresholds
-# ---------------------------------------------------------------------------
 
 def test_positive_label_above_threshold():
     df = _make_df(["good"], ["Aminata"])
@@ -196,10 +183,6 @@ def test_boundary_negative_threshold_is_inclusive():
     assert result["df"]["sentiment_label"].iloc[0] == "negative"
 
 
-# ---------------------------------------------------------------------------
-# by_user DataFrame
-# ---------------------------------------------------------------------------
-
 def test_by_user_is_dataframe():
     df = _make_df(_TEXTS, _AUTHORS)
     with patch(_VADER_CLS, return_value=_make_vader_mock()):
@@ -228,10 +211,6 @@ def test_by_user_row_count_matches_unique_authors():
     n_authors = df["author"].nunique()
     assert len(result["by_user"]) == n_authors
 
-
-# ---------------------------------------------------------------------------
-# global stats dict
-# ---------------------------------------------------------------------------
 
 def test_global_has_mean_key():
     df = _make_df(_TEXTS, _AUTHORS)
@@ -311,10 +290,6 @@ def test_global_neg_pct_correctness():
     assert abs(result["global"]["neg_pct"] - 2 / 6) < 1e-6
 
 
-# ---------------------------------------------------------------------------
-# VADER wiring
-# ---------------------------------------------------------------------------
-
 def test_vader_polarity_scores_called_for_each_message():
     df = _make_df(_TEXTS, _AUTHORS)
     mock_vader = _make_vader_mock()
@@ -334,10 +309,6 @@ def test_vader_compound_key_is_used():
     assert result["df"]["sentiment_score"].iloc[0] == pytest.approx(0.5)
 
 
-# ---------------------------------------------------------------------------
-# Error cases
-# ---------------------------------------------------------------------------
-
 def test_empty_dataframe_raises_value_error():
     df = pd.DataFrame(columns=["cleaned_message", "author"])
     with pytest.raises(ValueError, match="empty"):
@@ -356,10 +327,10 @@ def test_missing_author_column_raises():
         SentimentAnalyzer().analyze(df)
 
 
-# ---------------------------------------------------------------------------
-# CamemBERT path (issue #06)
-# transformers is never imported for real — the whole module is mocked.
-# ---------------------------------------------------------------------------
+"""
+CamemBERT path (issue #06)
+transformers is never imported for real — the whole module is mocked.
+"""
 
 def _make_camembert_pipeline_mock(
     labels_scores: list[tuple[str, float]] | None = None
@@ -392,7 +363,7 @@ def _make_transformers_module_mock(pipeline_instance):
     return mod
 
 
-# --- return type and structure ---
+""" --- return type and structure --- """
 
 def test_camembert_analyze_returns_dict():
     df = _make_df(_TEXTS, _AUTHORS)
@@ -434,7 +405,7 @@ def test_camembert_preserves_row_count():
     assert len(result["df"]) == len(df)
 
 
-# --- positive label maps to +score ---
+""" --- positive label maps to +score --- """
 
 def test_camembert_label1_gives_positive_score():
     df = _make_df(["super"], ["Aminata"])
@@ -462,7 +433,7 @@ def test_camembert_label_values_are_valid():
     )
 
 
-# --- fallback to VADER when transformers is absent ---
+""" --- fallback to VADER when transformers is absent --- """
 
 def test_camembert_falls_back_to_vader_when_not_installed():
     df = _make_df(_TEXTS, _AUTHORS)
@@ -475,7 +446,7 @@ def test_camembert_falls_back_to_vader_when_not_installed():
     assert mock_vader.polarity_scores.call_count == len(_TEXTS)
 
 
-# --- non-French language routes to VADER even when transformers is present ---
+""" --- non-French language routes to VADER even when transformers is present --- """
 
 def test_english_lang_uses_vader_not_camembert():
     df = _make_df(_TEXTS, _AUTHORS)
@@ -488,12 +459,12 @@ def test_english_lang_uses_vader_not_camembert():
     assert pipe.call_count == 0
 
 
-# --- VADER path unaffected after CamemBERT addition ---
+ """--- VADER path unaffected after CamemBERT addition ---"""
 
 def test_vader_path_unaffected():
     df = _make_df(_TEXTS, _AUTHORS)
     mock_vader = _make_vader_mock()
-    # Ensure transformers is absent so VADER is always chosen
+    """ Ensure transformers is absent so VADER is always chosen """
     with patch.dict("sys.modules", {"transformers": None}):
         with patch(_VADER_CLS, return_value=mock_vader):
             result = SentimentAnalyzer(lang="en").analyze(df)
