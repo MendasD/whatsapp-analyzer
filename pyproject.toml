@@ -18,6 +18,8 @@ dependencies = [
     "seaborn>=0.13.0",
     "rich>=14.3.3",
     "spacy>=3.8.13",
+    "vaderSentiment>=3.3.2",
+    "transformers>=4.40.0",
 ]
 
 [project.scripts]
