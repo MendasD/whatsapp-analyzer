@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "click>=8.1.0",
+    "streamlit>=1.35.0",
     "emoji>=2.15.0",
     "langdetect>=1.0.9",
     "nltk>=3.9.4",
@@ -21,3 +22,7 @@ dependencies = [
 
 [project.scripts]
 whatsapp-analyser = "whatsapp_analyzer.cli:cli"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["whatsapp_analyzer*"]
