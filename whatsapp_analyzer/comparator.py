@@ -164,7 +164,9 @@ class GroupComparator:
         """
         Generate a multi-group comparison HTML report.
 
-        Delegates rendering to Visualizer.generate_comparison_report().
+        Pre-computes all comparison DataFrames and passes them as a single
+        dict to Visualizer so that the visualizer never needs to import this
+        module (which would create a circular import).
 
         Args:
             output: Directory where comparison_report.html will be written.
@@ -174,4 +176,11 @@ class GroupComparator:
         """
         from whatsapp_analyzer.visualizer import Visualizer
 
-        return Visualizer().generate_comparison_report(self.analyzers, Path(output))
+        comparison_data = {
+            "analyzers":    self.analyzers,
+            "activity":     self.compare_activity(),
+            "topics":       self.compare_topics(),
+            "sentiment":    self.compare_sentiment(),
+            "common_users": self.common_users(),
+        }
+        return Visualizer().generate_comparison_report(comparison_data, Path(output))

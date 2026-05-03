@@ -185,9 +185,10 @@ class Cleaner:
         """
         Load stopwords for the given language code.
 
-        Tries spaCy first, then NLTK, then returns an empty set.
+        Tries spaCy first, then NLTK (auto-downloading the corpus if needed),
+        then returns an empty set.
         """
-        # Try spaCy stopwords (no model download required, part of the package)
+        # Try spaCy stopwords (no model download required, bundled with the package)
         try:
             import spacy
             model_name = _SPACY_MODELS.get(lang)
@@ -197,8 +198,10 @@ class Cleaner:
         except Exception:
             pass
 
-        # Try NLTK stopwords
+        # Ensure the NLTK stopwords corpus is present, downloading silently if not
         try:
+            import nltk
+            nltk.download("stopwords", quiet=True)
             from nltk.corpus import stopwords as nltk_sw
             nltk_lang = _NLTK_LANG_MAP.get(lang, "english")
             return set(nltk_sw.words(nltk_lang))
@@ -210,17 +213,34 @@ class Cleaner:
 
     @staticmethod
     def _load_spacy(lang: str):
-        """Load a spaCy model for the given language, or return None on failure."""
+        """Load a spaCy model, auto-downloading it if not found locally."""
+        import sys
+
         model_name = _SPACY_MODELS.get(lang)
         if not model_name:
             return None
         try:
             import spacy
             return spacy.load(model_name)
-        except Exception:
+        except OSError:
+            # Model package is missing — attempt a silent download
+            import subprocess
+            logger.info("spaCy model '%s' not found locally. Downloading…", model_name)
+            proc = subprocess.run(
+                [sys.executable, "-m", "spacy", "download", model_name],
+                capture_output=True,
+            )
+            if proc.returncode == 0:
+                try:
+                    import spacy
+                    return spacy.load(model_name)
+                except Exception:
+                    pass
             logger.warning(
-                "spaCy model '%s' not found. Run: python -m spacy download %s",
-                model_name,
+                "Could not download spaCy model '%s'. Lemmatisation disabled.",
                 model_name,
             )
+            return None
+        except Exception:
+            logger.warning("Could not load spaCy model '%s'.", model_name)
             return None

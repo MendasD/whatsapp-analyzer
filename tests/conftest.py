@@ -12,9 +12,7 @@ from unittest.mock import MagicMock
 _AUTHORS = ["Aminata", "Moussa", "Fatou", "Ibrahima", "Mariama"]
 
 
-# ---------------------------------------------------------------------------
 # Helper — build a minimal clean DataFrame
-# ---------------------------------------------------------------------------
 
 def _make_df(n: int = 10) -> pd.DataFrame:
     """Return a fake cleaned DataFrame with n rows."""
@@ -39,9 +37,7 @@ def _make_df(n: int = 10) -> pd.DataFrame:
     )
 
 
-# ---------------------------------------------------------------------------
 # sample_results fixture
-# ---------------------------------------------------------------------------
 
 @pytest.fixture
 def sample_results() -> dict:
@@ -122,9 +118,7 @@ def sample_results() -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
 # sample_topics fixture
-# ---------------------------------------------------------------------------
 
 @pytest.fixture
 def sample_topics() -> pd.DataFrame:
@@ -146,9 +140,7 @@ def sample_topics() -> pd.DataFrame:
     )
 
 
-# ---------------------------------------------------------------------------
 # sample_sentiment fixture
-# ---------------------------------------------------------------------------
 
 @pytest.fixture
 def sample_sentiment() -> dict:
@@ -175,9 +167,7 @@ def sample_sentiment() -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
 # sample_temporal fixture
-# ---------------------------------------------------------------------------
 
 @pytest.fixture
 def sample_temporal() -> dict:
@@ -205,9 +195,7 @@ def sample_temporal() -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
 # mock_analyzer fixture
-# ---------------------------------------------------------------------------
 
 @pytest.fixture
 def mock_analyzer() -> MagicMock:
