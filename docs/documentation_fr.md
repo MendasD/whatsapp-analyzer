@@ -58,6 +58,12 @@
 - Python ≥ 3.12
 - `pip` ou `uv`
 
+### Installation avec pip
+
+```
+pip install wachat-analyzer
+```
+
 ### Installation de base
 
 ```bash
